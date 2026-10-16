@@ -17,6 +17,8 @@ type ShieldSnapshot = {
   capacity: number;
   missingCharge: number;
 };
+const shieldChangedEvent = "shield-changed";
+const shieldEvents = new EventTarget();
 
 let shieldCharge = 0;
 let panel: HTMLParagraphElement | null = null;
@@ -28,6 +30,17 @@ function takeShieldSnapshot(): ShieldSnapshot {
     capacity: shieldMax,
     missingCharge: shieldMax - shieldCharge,
   };
+}
+
+// EventTarget hands listeners a plain Event, so read the snapshot out here.
+function snapshotOf(event: Event): ShieldSnapshot {
+  return (event as CustomEvent<ShieldSnapshot>).detail;
+}
+
+function shieldAnnouncement(snapshot: ShieldSnapshot): void {
+  shieldEvents.dispatchEvent(
+    new CustomEvent<ShieldSnapshot>(shieldChangedEvent, { detail: snapshot }),
+  );
 }
 
 function drawMeter(snapshot: ShieldSnapshot) {
@@ -60,9 +73,13 @@ function setCount(next: number) {
   if (bounded === shieldCharge) return;
   shieldCharge = bounded;
   const snapshot = takeShieldSnapshot();
-  drawMeter(snapshot);
+  shieldAnnouncement(snapshot);
   if (panel) updateStats(snapshot);
 }
+
+shieldEvents.addEventListener(shieldChangedEvent, (event) => {
+  drawMeter(snapshotOf(event));
+});
 
 document.querySelector<HTMLButtonElement>("#counter-less")!.onclick = () => {
   setCount(shieldCharge - 1);
@@ -84,4 +101,5 @@ document.querySelector<HTMLButtonElement>("#counter-close")!.onclick = () => {
   panel.remove();
   panel = null;
 };
+
 drawMeter(takeShieldSnapshot());
