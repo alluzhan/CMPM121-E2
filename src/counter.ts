@@ -17,11 +17,17 @@ type ShieldSnapshot = {
   capacity: number;
   missingCharge: number;
 };
+
+type Inspector = {
+  panel: HTMLParagraphElement;
+  listener: EventListener;
+};
+let inspector: Inspector | null = null;
+
 const shieldChangedEvent = "shield-changed";
 const shieldEvents = new EventTarget();
 
 let shieldCharge = 0;
-let panel: HTMLParagraphElement | null = null;
 let panelUpdates = 0;
 
 function takeShieldSnapshot(): ShieldSnapshot {
@@ -32,7 +38,6 @@ function takeShieldSnapshot(): ShieldSnapshot {
   };
 }
 
-// EventTarget hands listeners a plain Event, so read the snapshot out here.
 function snapshotOf(event: Event): ShieldSnapshot {
   return (event as CustomEvent<ShieldSnapshot>).detail;
 }
@@ -56,14 +61,7 @@ function drawMeter(snapshot: ShieldSnapshot) {
     `Shield charge: ${snapshot.charge} / ${snapshot.capacity}`;
 }
 
-function updateStats(snapshot: ShieldSnapshot) {
-  panelUpdates++;
-  diagnostic.textContent = `Inspector deliveries: ${panelUpdates}`;
-  renderStats(snapshot);
-}
-
-function renderStats(snapshot: ShieldSnapshot) {
-  if (!panel) return;
+function renderStats(panel: HTMLParagraphElement, snapshot: ShieldSnapshot) {
   panel.textContent =
     `Shield charge: ${snapshot.charge} · Missing charge: ${snapshot.missingCharge}`;
 }
@@ -72,9 +70,30 @@ function setCount(next: number) {
   const bounded = Math.max(0, Math.min(shieldMax, next));
   if (bounded === shieldCharge) return;
   shieldCharge = bounded;
-  const snapshot = takeShieldSnapshot();
-  shieldAnnouncement(snapshot);
-  if (panel) updateStats(snapshot);
+  shieldAnnouncement(takeShieldSnapshot());
+}
+
+function openInspector() {
+  if (inspector) return;
+  const panel = document.createElement("p");
+  const listener: EventListener = (event) => {
+    panelUpdates++;
+
+    diagnostic.textContent = `Inspector deliveries: ${panelUpdates}`;
+    renderStats(panel, snapshotOf(event));
+  };
+  renderStats(panel, takeShieldSnapshot());
+  host.append(panel);
+  shieldEvents.addEventListener(shieldChangedEvent, listener);
+  inspector = { panel, listener };
+}
+
+function closeInspector() {
+  if (!inspector) return;
+  shieldEvents.removeEventListener(shieldChangedEvent, inspector.listener);
+
+  inspector.panel.remove();
+  inspector = null;
 }
 
 shieldEvents.addEventListener(shieldChangedEvent, (event) => {
@@ -90,16 +109,10 @@ document.querySelector<HTMLButtonElement>("#counter-more")!.onclick = () => {
 document.querySelector<HTMLButtonElement>("#counter-reset")!.onclick = () => {
   setCount(0);
 };
-document.querySelector<HTMLButtonElement>("#counter-open")!.onclick = () => {
-  if (panel) return;
-  panel = document.createElement("p");
-  host.append(panel);
-  renderStats(takeShieldSnapshot());
-};
-document.querySelector<HTMLButtonElement>("#counter-close")!.onclick = () => {
-  if (!panel) return;
-  panel.remove();
-  panel = null;
-};
+document.querySelector<HTMLButtonElement>("#counter-open")!.onclick =
+  openInspector;
+
+document.querySelector<HTMLButtonElement>("#counter-close")!.onclick =
+  closeInspector;
 
 drawMeter(takeShieldSnapshot());
