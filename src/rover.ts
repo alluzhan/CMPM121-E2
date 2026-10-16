@@ -8,7 +8,12 @@ let x = 2;
 let y = 2;
 let direction = 0;
 
-function drawRover() {
+type Command = {
+  label: string;
+  execute: () => void;
+};
+
+function drawRover(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = "#718881";
   for (let row = 0; row < 5; row++) {
@@ -32,21 +37,38 @@ function drawRover() {
   }`;
 }
 
-document.querySelector<HTMLButtonElement>("#rover-forward")!.onclick = () => {
+function moveForward(): void {
   if (direction === 0) y = Math.max(0, y - 1);
   if (direction === 1) x = Math.min(4, x + 1);
   if (direction === 2) y = Math.min(4, y + 1);
   if (direction === 3) x = Math.max(0, x - 1);
-  drawRover();
-};
-document.querySelector<HTMLButtonElement>("#rover-right")!.onclick = () => {
+}
+
+function turnRight(): void {
   direction = (direction + 1) % 4;
-  drawRover();
-};
-document.querySelector<HTMLButtonElement>("#rover-reset")!.onclick = () => {
+}
+
+function resetRover(): void {
   x = 2;
   y = 2;
   direction = 0;
+}
+const forwardCommand: Command = { label: "Forward", execute: moveForward };
+const turnRightCommand: Command = { label: "Right", execute: turnRight };
+
+function runCommand(command: Command): void {
+  command.execute();
+  drawRover();
+}
+
+document.querySelector<HTMLButtonElement>("#rover-forward")!.onclick = () => {
+  runCommand(forwardCommand);
+};
+document.querySelector<HTMLButtonElement>("#rover-right")!.onclick = () => {
+  runCommand(turnRightCommand);
+};
+document.querySelector<HTMLButtonElement>("#rover-reset")!.onclick = () => {
+  resetRover();
   drawRover();
 };
 drawRover();
