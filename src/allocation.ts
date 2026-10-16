@@ -32,30 +32,60 @@ function drawBar(
   ctx.fillRect(18, labelY + 8, value * barScale, 20);
 }
 
-function updateDisplay(): void {
-  const production = supplyCrewCnt * suppliesPerProducer;
-  const consumption = crewSize * suppliesNeededPerCrew;
-  const balance = production - consumption;
-
+function renderCanvas(report: ShiftResults): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let crewIndex = 0; crewIndex < crewSize; crewIndex++) {
-    const onSupplyDuty = crewIndex < supplyCrewCnt;
+  for (let crewIndex = 0; crewIndex < report.crewSize; crewIndex++) {
+    const onSupplyDuty = crewIndex < report.supplyCrew;
     ctx.fillStyle = onSupplyDuty ? "#27766b" : "#c9d2c9";
     ctx.fillRect(18 + crewIndex * 45, 16, 36, 36);
     ctx.fillStyle = onSupplyDuty ? "#ffffff" : "#233e43";
     ctx.font = "16px system-ui";
     ctx.fillText(String(crewIndex + 1), 31 + crewIndex * 45, 40);
   }
+
   ctx.fillStyle = "#233e43";
   ctx.font = "14px system-ui";
-  ctx.fillText(`Producers: ${supplyCrewCnt} / ${crewSize}`, 18, 76);
-  drawBar("Production", production, "#27766b", 102);
-  drawBar("Consumption", consumption, "#a44d23", 154);
+  ctx.fillText(
+    `Producers: ${report.supplyCrew} / ${report.crewSize}`,
+    18,
+    76,
+  );
 
-  const balanceText = `${balance > 0 ? "+" : ""}${balance}`;
-  readout.textContent =
-    `Assigned: ${supplyCrewCnt}/${crewSize} · Production: ${production} · ` +
-    `Consumption: ${consumption} · Balance: ${balanceText}`;
+  drawBar("Production", report.production, "#27766b", 102);
+  drawBar("Consumption", report.consumption, "#a44d23", 154);
+}
+
+function writeShiftSummary(report: ShiftResults): void {
+  const balanceText = `${report.balance > 0 ? "+" : ""}${report.balance}`;
+  readout.textContent = `Assigned: ${report.supplyCrew}/${report.crewSize} · ` +
+    `Production: ${report.production} · ` +
+    `Consumption: ${report.consumption} · Balance: ${balanceText}`;
+}
+
+function updateDisplay(): void {
+  const report = shiftCalculation(supplyCrewCnt);
+  renderCanvas(report);
+  writeShiftSummary(report);
+}
+
+type ShiftResults = {
+  supplyCrew: number;
+  crewSize: number;
+  production: number;
+  consumption: number;
+  balance: number;
+};
+
+function shiftCalculation(supplyCrew: number): ShiftResults {
+  const production = supplyCrew * suppliesPerProducer;
+  const consumption = crewSize * suppliesNeededPerCrew;
+  return {
+    supplyCrew,
+    crewSize,
+    production,
+    consumption,
+    balance: production - consumption,
+  };
 }
 
 document.querySelector<HTMLButtonElement>("#allocation-less")!.onclick = () => {
