@@ -11,9 +11,21 @@ const suppliesPerProducer = 3;
 const suppliesNeededPerCrew = 1;
 const startingSupplyCrew = 2;
 const barScale = 14;
+const firstRowLabelYAxis = 102;
+const rowSpacing = 52;
 
 let supplyCrewCnt = startingSupplyCrew;
 
+type DisplayRow = {
+  label: string;
+  color: string;
+  quantity: "production" | "consumption";
+};
+
+const displayRows: DisplayRow[] = [
+  { label: "Production", color: "#27766b", quantity: "production" },
+  { label: "Consumption", color: "#a44d23", quantity: "consumption" },
+];
 function setSupplyCrew(count: number): void {
   supplyCrewCnt = Math.max(0, Math.min(crewSize, count));
   updateDisplay();
@@ -51,8 +63,10 @@ function renderCanvas(report: ShiftResults): void {
     76,
   );
 
-  drawBar("Production", report.production, "#27766b", 102);
-  drawBar("Consumption", report.consumption, "#a44d23", 154);
+  displayRows.forEach((row, index) => {
+    const labelY = firstRowLabelYAxis + index * rowSpacing;
+    drawBar(row.label, report[row.quantity], row.color, labelY);
+  });
 }
 
 function writeShiftSummary(report: ShiftResults): void {
