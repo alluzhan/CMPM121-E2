@@ -3,15 +3,32 @@ export {};
 const canvas = document.querySelector<HTMLCanvasElement>("#rover-canvas")!;
 const ctx = canvas.getContext("2d")!;
 const readout = document.querySelector<HTMLParagraphElement>("#rover-readout")!;
-const headings = ["North", "East", "South", "West"];
-let x = 2;
-let y = 2;
-let direction = 0;
+
+const gridSize = 5;
+const startingX = 2;
+const startingY = 2;
+const startingDirectionIndex = 0;
 
 type Command = {
   label: string;
   execute: () => void;
 };
+
+type Direction = {
+  name: string;
+  x: number;
+  y: number;
+};
+const directions: Direction[] = [
+  { name: "North", x: 0, y: -1 },
+  { name: "East", x: 1, y: 0 },
+  { name: "South", x: 0, y: 1 },
+  { name: "West", x: -1, y: 0 },
+];
+
+let x = startingX;
+let y = startingY;
+let directionIndex = startingDirectionIndex;
 
 function drawRover(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -23,7 +40,7 @@ function drawRover(): void {
   }
   ctx.save();
   ctx.translate(38 + x * 56, 38 + y * 56);
-  ctx.rotate(direction * Math.PI / 2);
+  ctx.rotate(directionIndex * Math.PI / 2);
   ctx.fillStyle = "#27766b";
   ctx.beginPath();
   ctx.moveTo(0, -20);
@@ -32,26 +49,28 @@ function drawRover(): void {
   ctx.closePath();
   ctx.fill();
   ctx.restore();
-  readout.textContent = `Position: (${x}, ${y}) · Facing: ${
-    headings[direction]
-  }`;
+  const heading = directions[directionIndex];
+  readout.textContent = `Position: (${x}, ${y}) · Facing: ${heading.name}`;
+}
+
+function boundMovement(value: number): number {
+  return Math.max(0, Math.min(gridSize - 1, value));
 }
 
 function moveForward(): void {
-  if (direction === 0) y = Math.max(0, y - 1);
-  if (direction === 1) x = Math.min(4, x + 1);
-  if (direction === 2) y = Math.min(4, y + 1);
-  if (direction === 3) x = Math.max(0, x - 1);
+  const heading = directions[directionIndex];
+  x = boundMovement(x + heading.x);
+  y = boundMovement(y + heading.y);
 }
 
 function turnRight(): void {
-  direction = (direction + 1) % 4;
+  directionIndex = (directionIndex + 1) % directions.length;
 }
 
 function resetRover(): void {
-  x = 2;
-  y = 2;
-  direction = 0;
+  x = startingX;
+  y = startingY;
+  directionIndex = startingDirectionIndex;
 }
 const forwardCommand: Command = { label: "Forward", execute: moveForward };
 const turnRightCommand: Command = { label: "Right", execute: turnRight };
